@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: rentals
+    description: Raw OTA booking data loaded from the application database.
+    schema: raw
+    tables:
+      - name: bookings
+        description: One row per booking as received from the channel feeds.
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        columns:
+          - name: booking_id
+            description: Natural key for a booking.
+            data_tests: [not_null, unique]
+      - name: properties
+        description: Listings. Attributes (rate, status) change over time and are snapshotted.
+        columns:
+          - name: property_id
+            data_tests: [not_null, unique]
+      - name: guests
+        description: Guest records.
+        columns:
+          - name: guest_id
+            data_tests: [not_null, unique]
+      - name: channels
+        description: Distribution channels (Airbnb, Booking.com, direct, etc.).
+        columns:
+          - name: channel_code
+            data_tests: [not_null, unique]

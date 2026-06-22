@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: dim_property
+    description: SCD2 property dimension. One row per property version.
+    columns:
+      - name: property_key
+        description: Surrogate key, unique per property version.
+        data_tests: [not_null, unique]
+      - name: property_id
+        data_tests: [not_null]
+
+  - name: dim_channel
+    description: Distribution channel with its fee rate.
+    columns:
+      - name: channel_key
+        data_tests: [not_null, unique]
+      - name: channel_code
+        data_tests: [not_null, unique]
+
+  - name: dim_guest
+    description: Guest dimension.
+    columns:
+      - name: guest_key
+        data_tests: [not_null, unique]
+
+  - name: dim_date
+    description: Conformed date dimension, 2020-2030.
+    columns:
+      - name: date_key
+        description: Integer YYYYMMDD key.
+        data_tests: [not_null, unique]
+
+  - name: fct_bookings
+    description: One row per booking. Property resolved point-in-time against SCD2.
+    columns:
+      - name: booking_key
+        data_tests: [not_null, unique]
+      - name: booking_id
+        data_tests: [not_null, unique]
+      - name: property_key
+        data_tests:
+          - relationships:
+              to: ref('dim_property')
+              field: property_key
+      - name: channel_key
+        data_tests:
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_key
+      - name: guest_key
+        data_tests:
+          - relationships:
+              to: ref('dim_guest')
+              field: guest_key
+      - name: check_in_date_key
+        data_tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: booking_status
+        data_tests:
+          - accepted_values:
+              values: [confirmed, cancelled, pending, completed]
+
+  - name: fct_occupancy_daily
+    description: One row per current property per calendar date, with occupancy flag.
+    columns:
+      - name: occupancy_key
+        data_tests: [not_null, unique]
+      - name: property_key
+        data_tests:
+          - relationships:
+              to: ref('dim_property')
+              field: property_key
+      - name: date_key
+        data_tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_key

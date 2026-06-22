@@ -1,0 +1,201 @@
+# Vacancy
+
+A dimensional warehouse over short-term-rental booking data, built with dbt on PostgreSQL. Raw booking feeds (Airbnb, Booking.com, Vrbo, direct) land as sources; dbt turns them into a tested, documented star schema that answers revenue, channel-mix, and occupancy questions without hand-written reporting SQL.
+
+Runs entirely on **synthetic data**. The included generator (`scripts/generate_synthetic_data.py`) fabricates realistic bookings, properties, and guests — seasonality, a believable channel mix, repeat guests, regional rate tiers — with seeded, reproducible RNG. No real guests or hosts, nothing to expose. The modeling is what's on display, and it behaves identically on real data.
+
+> Status: skeleton. Sections marked `TODO` get filled once the models are built and run. Design decisions below are final; numbers and screenshots are not yet.
+
+## What it does
+
+- Ingests raw bookings, properties, guests, and channel data into a staging layer.
+- Tracks property attribute history (rate, status, listing details) with an SCD2 snapshot, so revenue attributes to the property state at booking time.
+- Builds two facts at different grains: bookings (one row per booking) and daily occupancy (one row per property per date).
+- Enforces data-quality contracts with dbt tests so a bad upstream feed fails the build instead of silently corrupting a dashboard.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph raw["Raw sources (Postgres)"]
+    s1[(bookings)]
+    s2[(properties)]
+    s3[(guests)]
+    s4[(channels)]
+  end
+
+  subgraph stg["staging — stg_*"]
+    g1[stg_rentals__bookings]
+    g2[stg_rentals__properties]
+    g3[stg_rentals__guests]
+    g4[stg_rentals__channels]
+  end
+
+  snap[[property_snapshot<br/>SCD2]]
+
+  subgraph int["intermediate — int_*"]
+    i1[int_bookings_enriched]
+    i2[int_occupancy_spined]
+  end
+
+  subgraph marts["marts"]
+    d1[dim_property]
+    d2[dim_channel]
+    d3[dim_guest]
+    d4[dim_date]
+    f1[fct_bookings]
+    f2[fct_occupancy_daily]
+  end
+
+  s1 --> g1
+  s2 --> g2
+  s3 --> g3
+  s4 --> g4
+  s2 --> snap
+
+  g1 --> i1
+  g2 --> snap
+  snap --> d1
+  g4 --> d2
+  g3 --> d3
+
+  i1 --> f1
+  i1 --> i2
+  i2 --> f2
+  d1 --> f2
+  d4 --> f2
+
+  d1 --> f1
+  d2 --> f1
+  d3 --> f1
+  d4 --> f1
+```
+
+Full lineage, the star-schema ER diagram, and the modeling rationale live in [`docs/architecture.md`](docs/architecture.md).
+
+## Modeling decisions
+
+The decisions worth defending in an interview:
+
+- **SCD2 on `dim_property`.** Nightly rate, status, and listing attributes change over the life of a listing. A booking made in March must attribute to the property's March state, not today's. The snapshot uses the `check` strategy on the volatile columns, with `hard_deletes: new_record` so delisted properties stay queryable in history.
+- **Two facts, two grains.** `fct_bookings` is one row per booking (revenue, fees, nights). `fct_occupancy_daily` is one row per property per calendar date (occupied flag), derived by exploding each booking into its occupied nights. Mixing both grains in one table would force non-additive measures and break simple aggregation.
+- **Incremental `fct_bookings`.** Bookings mutate after creation (status changes, cancellations, payout adjustments), so the fact is incremental on `booking_id` with `delete+insert`, which is safe on Postgres without requiring a merge. Late-arriving updates are caught by a lookback window rather than a full rebuild.
+- **ELT, not ETL.** Raw data lands first; all transformation is SQL in the warehouse, version-controlled and tested. Reprocessing is a `dbt build`, not a re-extraction.
+
+## Data quality
+
+Tests are contracts, not decoration. What the build guarantees:
+
+- **Generic tests** (`data_tests:` in the model YAML): `unique` + `not_null` on every surrogate and natural key; `relationships` from each fact foreign key to its dimension; `accepted_values` on `booking_status`.
+- **Singular tests** (`tests/`): no booking with `check_out <= check_in`; no negative `net_revenue`.
+- **Unit tests** (dbt 1.8+): the net-revenue and nights calculations in `int_bookings_enriched` are unit-tested against fixed inputs, so a logic regression fails in CI before it touches data.
+
+A failing test fails `dbt build`. Nothing downstream runs on data that broke a contract.
+
+## Project structure
+
+```
+vacancy-analytics/
+├── dbt_project.yml
+├── packages.yml
+├── profiles.example.yml
+├── scripts/
+│   ├── generate_synthetic_data.py
+│   └── requirements.txt
+├── models/
+│   ├── staging/rentals/
+│   │   ├── _rentals__sources.yml
+│   │   ├── _rentals__models.yml
+│   │   ├── stg_rentals__bookings.sql
+│   │   ├── stg_rentals__properties.sql
+│   │   ├── stg_rentals__guests.sql
+│   │   └── stg_rentals__channels.sql
+│   ├── intermediate/
+│   │   ├── int_bookings_enriched.sql
+│   │   ├── int_occupancy_spined.sql
+│   │   └── _int__models.yml
+│   └── marts/
+│       ├── _marts__models.yml
+│       ├── dim_property.sql
+│       ├── dim_channel.sql
+│       ├── dim_guest.sql
+│       ├── dim_date.sql
+│       ├── fct_bookings.sql
+│       └── fct_occupancy_daily.sql
+├── snapshots/
+│   └── property_snapshot.yml
+├── seeds/
+│   └── channel_fee_rates.csv
+├── tests/
+│   ├── assert_checkout_after_checkin.sql
+│   └── assert_non_negative_net_revenue.sql
+├── macros/
+└── docs/
+    └── architecture.md
+```
+
+## Stack
+
+| Component | Version | Note |
+|---|---|---|
+| dbt Core | `~=1.11` (stable, 1.11.11 latest) | v2.0/Fusion is alpha as of June 2026 — staying on the stable line; fundamentals carry over |
+| dbt-postgres | matching 1.11 | adapter |
+| dbt-utils | `>=1.3.0,<2.0.0` | `generate_surrogate_key`, `date_spine` |
+| PostgreSQL | 15+ | local warehouse for Phase 1 |
+| psycopg / Faker | psycopg 3, Faker | only for the synthetic-data generator |
+
+This project moves to Snowflake + Airflow orchestration in the next portfolio piece; the models here are written to port with minimal change.
+
+## Run it
+
+```bash
+# 1. Install dbt + the generator's deps (use a virtualenv)
+pip install "dbt-postgres~=1.11"
+pip install -r scripts/requirements.txt
+
+# 2. Generate synthetic source data into Postgres
+export DATABASE_URL=postgresql://user:pass@localhost:5432/vacancy_analytics
+python scripts/generate_synthetic_data.py --seed 42
+
+# 3. Point dbt at the same Postgres
+cp profiles.example.yml ~/.dbt/profiles.yml   # then export DBT_PG_USER / DBT_PG_PASSWORD
+dbt debug                                       # confirms the connection
+
+# 4. Packages, then build
+dbt deps
+dbt seed          # static reference data (channel fee rates)
+dbt snapshot      # capture current property state into SCD2 history
+dbt build         # runs models + tests + seeds + snapshots in DAG order
+
+# 5. (optional) mutate properties, then re-snapshot to see SCD2 history accrue
+python scripts/generate_synthetic_data.py --mutate
+dbt snapshot
+
+# 6. Docs
+dbt docs generate && dbt docs serve
+```
+
+`profiles.example.yml` ships with the structure; real credentials stay out of git.
+
+## Sample questions it answers
+
+```sql
+-- Net revenue by channel, last 90 days (TODO: paste output)
+select c.channel_name,
+       sum(f.net_revenue) as net_revenue
+from   fct_bookings f
+join   dim_channel  c on c.channel_key = f.channel_key
+join   dim_date     d on d.date_key    = f.check_in_date_key
+where  d.calendar_date >= current_date - 90
+group  by 1
+order  by 2 desc;
+```
+
+- TODO: occupancy rate per property per month
+- TODO: revenue attributed to property state at booking time (the SCD2 payoff)
+
+## Notes
+
+- `docs/architecture.md` — lineage, star-schema ER diagram, grain statements.
+- TODO: screenshot of the dbt docs lineage graph once generated.
+- TODO: row counts / runtime once built against the generated dataset.

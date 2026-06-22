@@ -1,0 +1,15 @@
+# Copy to ~/.dbt/profiles.yml and fill in credentials via env vars.
+# Real secrets stay out of git — export DBT_PG_USER / DBT_PG_PASSWORD in your shell.
+vacancy_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: "{{ env_var('DBT_PG_USER') }}"
+      password: "{{ env_var('DBT_PG_PASSWORD') }}"
+      dbname: vacancy_analytics
+      schema: analytics      # models build into analytics; snapshots into analytics_snapshots
+      threads: 4
+      keepalives_idle: 0

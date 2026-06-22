@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_rentals__bookings
+    description: Cleaned, type-cast bookings — one row per booking, 1:1 with source.
+    columns:
+      - name: booking_id
+        description: Natural key.
+        data_tests: [not_null, unique]
+      - name: booking_status
+        description: Lifecycle state of the booking.
+        data_tests:
+          - accepted_values:
+              values: [confirmed, cancelled, pending, completed]
+      - name: property_id
+        data_tests: [not_null]
+      - name: channel_code
+        data_tests: [not_null]
+
+  - name: stg_rentals__properties
+    description: Cleaned listings. History is captured downstream via property_snapshot.
+    columns:
+      - name: property_id
+        data_tests: [not_null, unique]
+
+  - name: stg_rentals__guests
+    description: Cleaned guest records.
+    columns:
+      - name: guest_id
+        data_tests: [not_null, unique]
+
+  - name: stg_rentals__channels
+    description: Cleaned channel lookup.
+    columns:
+      - name: channel_code
+        data_tests: [not_null, unique]

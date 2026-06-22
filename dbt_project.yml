@@ -1,0 +1,36 @@
+name: 'vacancy_analytics'
+version: '1.0.0'
+config-version: 2
+
+# Pin to the stable 1.x line. YAML snapshots + the 1.9 snapshot config need >=1.9;
+# v2.0 is alpha as of June 2026, so it's excluded deliberately.
+require-dbt-version: [">=1.9.0", "<2.0.0"]
+
+profile: 'vacancy_analytics'
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  vacancy_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  vacancy_analytics:
+    channel_fee_rates:
+      +column_types:
+        channel_code: varchar
+        fee_rate: numeric(5,4)

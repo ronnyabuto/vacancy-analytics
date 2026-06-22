@@ -1,0 +1,17 @@
+snapshots:
+  - name: property_snapshot
+    relation: ref('stg_rentals__properties')
+    config:
+      schema: snapshots
+      unique_key: property_id
+      strategy: check
+      check_cols: [property_name, status, nightly_rate, city, bedrooms]
+      # Track delistings as a new row instead of dropping history.
+      hard_deletes: new_record
+      # Current records carry a far-future date rather than NULL, so
+      # point-in-time joins use a simple BETWEEN without NULL handling.
+      dbt_valid_to_current: "9999-12-31"
+      snapshot_meta_column_names:
+        dbt_valid_from: valid_from
+        dbt_valid_to: valid_to
+        dbt_is_deleted: is_deleted
