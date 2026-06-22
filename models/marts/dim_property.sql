@@ -38,6 +38,7 @@ select
     valid_from,
     valid_to,
     (valid_to = cast('9999-12-31' as timestamp)) as is_current,
-    -- dbt stores dbt_is_deleted as text ('True'/'False'), so coerce it to boolean
-    (lower(coalesce(is_deleted, 'false')) = 'true') as is_deleted
+    -- dbt_is_deleted is text on Postgres, may be boolean on Snowflake — cast to
+    -- varchar first so the coercion to boolean works on either adapter
+    (lower(coalesce(cast(is_deleted as varchar), 'false')) = 'true') as is_deleted
 from versioned

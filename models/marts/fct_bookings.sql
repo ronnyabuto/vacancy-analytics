@@ -1,8 +1,10 @@
 {{ config(
     materialized='incremental',
     unique_key='booking_id',
-    incremental_strategy='delete+insert'
+    incremental_strategy='merge'
 ) }}
+
+-- merge is portable: supported on Postgres 15+ and Snowflake (was delete+insert).
 
 -- Grain: one row per booking.
 -- Property is resolved point-in-time against the SCD2 dimension, so revenue

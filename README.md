@@ -144,7 +144,7 @@ vacancy-analytics/
 | PostgreSQL | 15+ | local warehouse for Phase 1 |
 | psycopg / Faker | psycopg 3, Faker | only for the synthetic-data generator |
 
-This project moves to Snowflake + Airflow orchestration in the next portfolio piece; the models here are written to port with minimal change.
+**Portable across warehouses.** The models run on **Postgres** (`dev` target) and **Snowflake** (`prod` target) unchanged — incremental `merge` and a `dbt_utils.date_spine` join (not Postgres-only `generate_series`) keep the SQL adapter-agnostic. Switch with `dbt build --target prod`; install `dbt-snowflake~=1.11` and set the `SNOWFLAKE_*` env vars. Airflow + Cosmos orchestration follows in Project #2.
 
 ## Run it
 
