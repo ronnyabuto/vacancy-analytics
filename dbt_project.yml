@@ -2,9 +2,10 @@ name: 'vacancy_analytics'
 version: '1.0.0'
 config-version: 2
 
-# Pin to the stable 1.x line. YAML snapshots + the 1.9 snapshot config need >=1.9;
-# v2.0 is alpha as of June 2026, so it's excluded deliberately.
-require-dbt-version: [">=1.9.0", "<2.0.0"]
+# Stay on the 1.x line (v2.0 is alpha as of June 2026). Floor is 1.10: it covers
+# the 1.9 YAML snapshot config and the nested-`arguments` generic-test syntax used
+# in the model YAML. The dbt-postgres adapter (1.10.1 stable) pulls a compatible core.
+require-dbt-version: [">=1.10.0", "<2.0.0"]
 
 profile: 'vacancy_analytics'
 

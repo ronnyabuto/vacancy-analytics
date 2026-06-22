@@ -41,27 +41,32 @@ models:
       - name: property_key
         data_tests:
           - relationships:
-              to: ref('dim_property')
-              field: property_key
+              arguments:
+                to: ref('dim_property')
+                field: property_key
       - name: channel_key
         data_tests:
           - relationships:
-              to: ref('dim_channel')
-              field: channel_key
+              arguments:
+                to: ref('dim_channel')
+                field: channel_key
       - name: guest_key
         data_tests:
           - relationships:
-              to: ref('dim_guest')
-              field: guest_key
+              arguments:
+                to: ref('dim_guest')
+                field: guest_key
       - name: check_in_date_key
         data_tests:
           - relationships:
-              to: ref('dim_date')
-              field: date_key
+              arguments:
+                to: ref('dim_date')
+                field: date_key
       - name: booking_status
         data_tests:
           - accepted_values:
-              values: [confirmed, cancelled, pending, completed]
+              arguments:
+                values: [confirmed, cancelled, pending, completed]
 
   - name: fct_occupancy_daily
     description: One row per current property per calendar date, with occupancy flag.
@@ -71,10 +76,12 @@ models:
       - name: property_key
         data_tests:
           - relationships:
-              to: ref('dim_property')
-              field: property_key
+              arguments:
+                to: ref('dim_property')
+                field: property_key
       - name: date_key
         data_tests:
           - relationships:
-              to: ref('dim_date')
-              field: date_key
+              arguments:
+                to: ref('dim_date')
+                field: date_key

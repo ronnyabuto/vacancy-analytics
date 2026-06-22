@@ -138,9 +138,9 @@ vacancy-analytics/
 
 | Component | Version | Note |
 |---|---|---|
-| dbt Core | `~=1.11` (stable, 1.11.11 latest) | v2.0/Fusion is alpha as of June 2026 — staying on the stable line; fundamentals carry over |
-| dbt-postgres | matching 1.11 | adapter |
-| dbt-utils | `>=1.3.0,<2.0.0` | `generate_surrogate_key`, `date_spine` |
+| dbt-postgres (adapter) | `~=1.10` (1.10.1 latest stable) | what you `pip install`; the 1.11 adapter line is still beta |
+| dbt Core | 1.11+ (pulled by the adapter) | v2.0/Fusion is alpha as of June 2026 — staying on the 1.x line |
+| dbt-utils | `>=1.3.0,<2.0.0` (1.4.0 current) | `generate_surrogate_key`, `date_spine` |
 | PostgreSQL | 15+ | local warehouse for Phase 1 |
 | psycopg / Faker | psycopg 3, Faker | only for the synthetic-data generator |
 
@@ -150,7 +150,7 @@ This project moves to Snowflake + Airflow orchestration in the next portfolio pi
 
 ```bash
 # 1. Install dbt + the generator's deps (use a virtualenv)
-pip install "dbt-postgres~=1.11"
+pip install "dbt-postgres~=1.10"
 pip install -r scripts/requirements.txt
 
 # 2. Generate synthetic source data into Postgres

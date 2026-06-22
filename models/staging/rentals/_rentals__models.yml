@@ -11,7 +11,8 @@ models:
         description: Lifecycle state of the booking.
         data_tests:
           - accepted_values:
-              values: [confirmed, cancelled, pending, completed]
+              arguments:
+                values: [confirmed, cancelled, pending, completed]
       - name: property_id
         data_tests: [not_null]
       - name: channel_code
