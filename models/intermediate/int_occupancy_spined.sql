@@ -26,4 +26,12 @@ occupied as (
     ) as gs
 )
 
-select * from occupied
+-- One row per (property, date): a property is occupied or not, regardless of how
+-- many overlapping bookings cover the night. Dedupe so fct_occupancy_daily keeps
+-- its one-row-per-property-per-date grain (overlaps would otherwise duplicate it).
+select distinct on (property_id, occupied_date)
+    property_id,
+    occupied_date,
+    booking_id
+from occupied
+order by property_id, occupied_date, booking_id

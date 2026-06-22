@@ -17,20 +17,26 @@ models:
 unit_tests:
   - name: test_nights_and_net_revenue
     description: Nights and net revenue derive correctly from a known booking + fee rate.
+    # CSV fixtures (not dict): values are cast to the model's column types, so the
+    # numeric(,2) money columns compare exactly. In dict format YAML reads 45.00 as
+    # the float 45.0, which mismatches the model's 45.00.
     model: int_bookings_enriched
     given:
       - input: ref('stg_rentals__bookings')
-        format: dict
-        rows:
-          - {booking_id: "b1", property_id: "p1", guest_id: "g1", channel_code: airbnb, booking_status: confirmed, check_in_date: "2026-03-01", check_out_date: "2026-03-04", gross_amount: 300.00, currency: USD, created_at: "2026-02-01 00:00:00", updated_at: "2026-02-01 00:00:00"}
-          - {booking_id: "b2", property_id: "p2", guest_id: "g2", channel_code: direct, booking_status: confirmed, check_in_date: "2026-03-10", check_out_date: "2026-03-12", gross_amount: 200.00, currency: USD, created_at: "2026-02-05 00:00:00", updated_at: "2026-02-05 00:00:00"}
+        format: csv
+        rows: |
+          booking_id,property_id,guest_id,channel_code,booking_status,check_in_date,check_out_date,gross_amount,updated_at
+          b1,p1,g1,airbnb,confirmed,2026-03-01,2026-03-04,300.00,2026-02-01 00:00:00
+          b2,p2,g2,direct,confirmed,2026-03-10,2026-03-12,200.00,2026-02-05 00:00:00
       - input: ref('channel_fee_rates')
-        format: dict
-        rows:
-          - {channel_code: airbnb, fee_rate: 0.1500}
-          - {channel_code: direct, fee_rate: 0.0000}
+        format: csv
+        rows: |
+          channel_code,fee_rate
+          airbnb,0.1500
+          direct,0.0000
     expect:
-      format: dict
-      rows:
-        - {booking_id: "b1", nights: 3, channel_fee: 45.00, net_revenue: 255.00}
-        - {booking_id: "b2", nights: 2, channel_fee: 0.00, net_revenue: 200.00}
+      format: csv
+      rows: |
+        booking_id,nights,channel_fee,net_revenue
+        b1,3,45.00,255.00
+        b2,2,0.00,200.00
