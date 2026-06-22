@@ -153,7 +153,7 @@ snapshots:
       strategy: check
       check_cols: [property_name, status, nightly_rate]
       hard_deletes: new_record          # delisted properties stay in history
-      dbt_valid_to_current: "9999-12-31"
+      dbt_valid_to_current: "'9999-12-31'::timestamp"   # raw SQL expr — must be quoted/cast
       snapshot_meta_column_names:
         dbt_valid_from: valid_from
         dbt_valid_to: valid_to

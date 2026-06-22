@@ -10,7 +10,7 @@ snapshots:
       hard_deletes: new_record
       # Current records carry a far-future date rather than NULL, so
       # point-in-time joins use a simple BETWEEN without NULL handling.
-      dbt_valid_to_current: "9999-12-31"
+      dbt_valid_to_current: "'9999-12-31'::timestamp"
       snapshot_meta_column_names:
         dbt_valid_from: valid_from
         dbt_valid_to: valid_to
